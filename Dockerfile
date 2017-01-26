@@ -10,6 +10,7 @@ RUN apk --update --no-cache add \
 	php7-pdo \
 	php7-pdo_mysql \
 	php7-opcache \
+	php7-fpm \
 	php7-apcu \
 	php7-openssl \
 	php7-curl \
@@ -31,6 +32,7 @@ RUN ln -s /usr/bin/php7 /usr/bin/php
 RUN addgroup -S www-data && adduser -S -G www-data www-data
 
 COPY ./docker/php/php.ini /etc/php7/php.ini
+COPY ./docker/php/php-fpm.conf /etc/php7/php-fpm.conf
 
 # install composer
 COPY ./docker/php/composer.sh /
@@ -39,37 +41,21 @@ RUN chmod +x composer.sh \
     && mv composer.phar /usr/bin/composer \
     && chmod +x /usr/bin/composer
 
-# fix minimum stability
-COPY ./docker/php/composer.json /home/www-data/.composer/composer.json
-
 # prepare volume directory
-RUN mkdir /home/www-data/api-platform
+RUN mkdir /api-platform
 
-# fix permissions before composer global
-RUN chown -R www-data:www-data /home/www-data
+WORKDIR /api-platform
 
-WORKDIR /home/www-data
+# fix volume permissions
+RUN chown -R www-data .
 
 # speed up composer
 RUN su-exec www-data composer global require hirak/prestissimo:^0.3
 
-# install php-pm
-RUN su-exec www-data composer global require php-pm/php-pm:dev-master php-pm/httpkernel-adapter:dev-master
+VOLUME /api-platform
 
-# configure php-pm
-RUN su-exec www-data /home/www-data/.composer/vendor/bin/ppm config --cgi-path=/usr/bin/php-cgi7 --bootstrap=Symfony --bridge HttpKernel
-
-VOLUME /home/www-data/api-platform
-
-EXPOSE 8080
+EXPOSE 9000
 
 COPY ./docker/php/docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-CMD ["/usr/local/bin/docker-entrypoint.sh"]
-
-# WORKDIR /home/www-data/api-platform
-#
-# RUN composer install --prefer-dist --no-scripts --no-progress --no-suggest --optimize-autoloader --classmap-authoritative
-
-# CMD ["/home/www-data/.composer/vendor/bin/ppm", "start"]
-# CMD ["/home/www-data/.composer/vendor/bin/ppm"]
+CMD ["docker-entrypoint.sh"]
