@@ -18,8 +18,9 @@ services:
         ports:
             - "80:80"
         volumes:
-            - ./api-platform:/api-platform
             - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+        volumes_from:
+            - php:ro
 
     database:
         image: mysql

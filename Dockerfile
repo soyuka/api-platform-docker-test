@@ -28,9 +28,6 @@ RUN apk --update --no-cache add \
 
 RUN ln -s /usr/bin/php7 /usr/bin/php
 
-# add www-data user
-RUN addgroup -S www-data && adduser -S -G www-data www-data
-
 COPY ./docker/php/php.ini /etc/php7/php.ini
 COPY ./docker/php/php-fpm.conf /etc/php7/php-fpm.conf
 
@@ -44,15 +41,13 @@ RUN chmod +x composer.sh \
 # prepare volume directory
 RUN mkdir /api-platform
 
-WORKDIR /api-platform
-
-# fix volume permissions
-RUN chown -R www-data .
+# add www-data user
+RUN addgroup -S www-data && adduser -S -G www-data www-data
 
 # speed up composer
 RUN su-exec www-data composer global require hirak/prestissimo:^0.3
 
-VOLUME /api-platform
+WORKDIR /api-platform
 
 EXPOSE 9000
 
