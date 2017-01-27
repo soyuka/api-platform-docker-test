@@ -1,38 +1,21 @@
-FROM alpine:edge
+FROM php:7.0-fpm-alpine
 
-RUN apk --update --no-cache add \
-        git \
-        openssh \
-	php7 \
-	php7-posix \
-	php7-ctype \
-	php7-dom \
-	php7-pdo \
-	php7-pdo_mysql \
-	php7-opcache \
-	php7-fpm \
-	php7-apcu \
-	php7-openssl \
-	php7-curl \
-	php7-pcntl \
-	php7-xml \
-	php7-json \
-	php7-phar \
-	php7-iconv \
-	php7-mbstring \
-	php7-session \
-	php7-mcrypt \
-	php7-zlib \
-	php7-cgi \
-        su-exec
-
-RUN ln -s /usr/bin/php7 /usr/bin/php
+# Git is for composer
+# openssh for future security support see https://github.com/api-platform/api-platform/issues/109
+# su-exec for managing permissions
+RUN export BUILD_DEPS="zlib-dev icu-dev" \
+    && apk --update --no-cache add \
+        ${BUILD_DEPS} \
+        git openssh su-exec \
+        icu-libs zlib \
+    && docker-php-ext-install \
+        intl mbstring pdo_mysql zip \
+    && apk del ${BUILD_DEPS}
 
 COPY ./docker/php/php.ini /etc/php7/php.ini
-COPY ./docker/php/php-fpm.conf /etc/php7/php-fpm.conf
 
 # install composer
-COPY ./docker/php/composer.sh /
+COPY ./docker/php/composer.sh composer.sh
 RUN chmod +x composer.sh \
     && sh composer.sh \
     && mv composer.phar /usr/bin/composer \
@@ -41,15 +24,10 @@ RUN chmod +x composer.sh \
 # prepare volume directory
 RUN mkdir /api-platform
 
-# add www-data user
-RUN addgroup -S www-data && adduser -S -G www-data www-data
-
 # speed up composer
 RUN su-exec www-data composer global require hirak/prestissimo:^0.3
 
 WORKDIR /api-platform
-
-EXPOSE 9000
 
 COPY ./docker/php/docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh

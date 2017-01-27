@@ -12,4 +12,4 @@ else
     su-exec www-data composer install --prefer-dist --no-dev --no-progress --no-suggest --optimize-autoloader --classmap-authoritative
 fi
 
-exec php-fpm7 -F
+exec php-fpm -F
